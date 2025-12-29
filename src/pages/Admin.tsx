@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { LogOut, Upload, Video, Music } from "lucide-react";
+import { LogOut, Upload, Video, Music, ClipboardCopy } from "lucide-react";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -21,10 +21,17 @@ const Admin = () => {
     duration_seconds: number | null;
   } | null>(null);
   const [durationMinutes, setDurationMinutes] = useState<number | "">("");
+  const [generatorMinutes, setGeneratorMinutes] = useState<number | "">("");
+  const [generatorSeconds, setGeneratorSeconds] = useState<number | "">("");
+  const [generatorUrl, setGeneratorUrl] = useState<string>("");
+  const [trialSeconds, setTrialSeconds] = useState<number | "">(10);
+  const [trialUrl, setTrialUrl] = useState<string>("");
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
       } else {
@@ -35,7 +42,9 @@ const Admin = () => {
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         navigate("/auth");
       }
@@ -63,6 +72,13 @@ const Admin = () => {
     navigate("/auth");
   };
 
+  const buildCallUrl = (totalSeconds: number) => {
+    const origin = window.location.origin;
+    const url = new URL("/", origin);
+    url.searchParams.set("seconds", String(totalSeconds));
+    return url.toString();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -71,22 +87,20 @@ const Admin = () => {
       let videoUrl = currentConfig?.video_url || null;
       let audioUrl = currentConfig?.audio_url || null;
       const durationSeconds =
-        typeof durationMinutes === "number" && durationMinutes > 0
-          ? durationMinutes * 60
-          : null;
+        typeof durationMinutes === "number" && durationMinutes > 0 ? durationMinutes * 60 : null;
 
       // Upload do vídeo
       if (videoFile) {
         const videoFileName = `video-${Date.now()}.mp4`;
-        const { data: videoData, error: videoError } = await supabase.storage
+        const { error: videoError } = await supabase.storage
           .from("call-media")
           .upload(videoFileName, videoFile, { upsert: true });
 
         if (videoError) throw videoError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("call-media")
-          .getPublicUrl(videoFileName);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("call-media").getPublicUrl(videoFileName);
 
         videoUrl = publicUrl;
       }
@@ -94,15 +108,15 @@ const Admin = () => {
       // Upload do áudio
       if (audioFile) {
         const audioFileName = `audio-${Date.now()}.mp3`;
-        const { data: audioData, error: audioError } = await supabase.storage
+        const { error: audioError } = await supabase.storage
           .from("call-media")
           .upload(audioFileName, audioFile, { upsert: true });
 
         if (audioError) throw audioError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("call-media")
-          .getPublicUrl(audioFileName);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("call-media").getPublicUrl(audioFileName);
 
         audioUrl = publicUrl;
       }
@@ -117,7 +131,7 @@ const Admin = () => {
 
       toast({
         title: "Configuração salva!",
-        description: "Vídeo e áudio atualizados com sucesso.",
+        description: "Vídeo, áudio e duração padrão atualizados com sucesso.",
       });
 
       setVideoFile(null);
@@ -195,7 +209,7 @@ const Admin = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="duration">Duração da chamada (minutos)</Label>
+                <Label htmlFor="duration">Duração padrão da chamada (minutos)</Label>
                 <Input
                   id="duration"
                   type="number"
@@ -214,15 +228,170 @@ const Admin = () => {
                   placeholder="Ex: 3"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Defina por quantos minutos a chamada ficará ativa antes de encerrar automaticamente.
+                  Duração padrão usada quando o link não informar um tempo específico.
                 </p>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading || (!videoFile && !audioFile && !durationMinutes)}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={loading || (!videoFile && !audioFile && !durationMinutes)}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 {loading ? "Salvando..." : "Salvar Configurações"}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Gerar link de chamada</CardTitle>
+            <CardDescription>
+              Gere links individuais para cada cliente, com duração personalizada ou experimental.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <Label>Chamada normal (minutos e segundos)</Label>
+              <div className="flex gap-3">
+                <Input
+                  type="number"
+                  min={0}
+                  max={120}
+                  value={generatorMinutes}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      setGeneratorMinutes("");
+                    } else {
+                      const parsed = parseInt(v, 10);
+                      setGeneratorMinutes(Number.isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  placeholder="Minutos"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={generatorSeconds}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      setGeneratorSeconds("");
+                    } else {
+                      const parsed = parseInt(v, 10);
+                      setGeneratorSeconds(Number.isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  placeholder="Segundos"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const mins = typeof generatorMinutes === "number" ? generatorMinutes : 0;
+                  const secs = typeof generatorSeconds === "number" ? generatorSeconds : 0;
+                  const total = mins * 60 + secs;
+                  if (total <= 0) {
+                    toast({
+                      variant: "destructive",
+                      title: "Tempo inválido",
+                      description: "Defina pelo menos 1 segundo de duração.",
+                    });
+                    return;
+                  }
+                  const url = buildCallUrl(total);
+                  setGeneratorUrl(url);
+                }}
+              >
+                Gerar link de chamada
+              </Button>
+              {generatorUrl && (
+                <div className="space-y-2">
+                  <Label>Link gerado</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={generatorUrl} className="text-xs" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(generatorUrl);
+                        toast({
+                          title: "Copiado",
+                          description: "Link copiado para a área de transferência.",
+                        });
+                      }}
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <Label>Chamada experimental (segundos)</Label>
+              <div className="flex gap-3 items-center">
+                <Input
+                  type="number"
+                  min={5}
+                  max={60}
+                  value={trialSeconds}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      setTrialSeconds("");
+                    } else {
+                      const parsed = parseInt(v, 10);
+                      setTrialSeconds(Number.isNaN(parsed) ? "" : parsed);
+                    }
+                  }}
+                  placeholder="Ex: 10"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    const secs = typeof trialSeconds === "number" ? trialSeconds : 0;
+                    if (secs <= 0) {
+                      toast({
+                        variant: "destructive",
+                        title: "Tempo inválido",
+                        description: "Defina ao menos alguns segundos.",
+                      });
+                      return;
+                    }
+                    const url = buildCallUrl(secs);
+                    setTrialUrl(url);
+                  }}
+                >
+                  Gerar link experimental
+                </Button>
+              </div>
+              {trialUrl && (
+                <div className="space-y-2">
+                  <Label>Link experimental</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={trialUrl} className="text-xs" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(trialUrl);
+                        toast({ title: "Copiado", description: "Link experimental copiado." });
+                      }}
+                    >
+                      <ClipboardCopy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

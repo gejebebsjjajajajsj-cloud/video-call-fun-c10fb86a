@@ -54,6 +54,16 @@ const Index = () => {
       document.head.appendChild(link);
     }
 
+    // Verificar se a URL já traz uma duração específica (em segundos)
+    const params = new URLSearchParams(window.location.search);
+    const secondsFromUrl = params.get("seconds");
+    if (secondsFromUrl) {
+      const parsed = parseInt(secondsFromUrl, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        setDurationLimitSeconds(parsed);
+      }
+    }
+
     // Buscar configuração de vídeo, áudio e duração do banco
     const loadConfig = async () => {
       const { data } = await supabase
@@ -65,7 +75,7 @@ const Index = () => {
       if (data) {
         setConfigVideoUrl(data.video_url);
         setConfigAudioUrl(data.audio_url);
-        setDurationLimitSeconds(data.duration_seconds ?? null);
+        setDurationLimitSeconds((prev) => (prev !== null ? prev : data.duration_seconds ?? null));
       }
     };
 
