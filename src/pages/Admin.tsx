@@ -20,7 +20,6 @@ const Admin = () => {
     audio_url: string | null;
     duration_seconds: number | null;
   } | null>(null);
-  const [durationMinutes, setDurationMinutes] = useState<number | "">("");
   const [generatorMinutes, setGeneratorMinutes] = useState<number | "">("");
   const [generatorSeconds, setGeneratorSeconds] = useState<number | "">("");
   const [generatorUrl, setGeneratorUrl] = useState<string>("");
@@ -62,7 +61,6 @@ const Admin = () => {
 
     if (!error && data) {
       setCurrentConfig(data);
-      setDurationMinutes(data.duration_seconds ? Math.round(data.duration_seconds / 60) : "");
     }
   };
 
@@ -86,8 +84,6 @@ const Admin = () => {
     try {
       let videoUrl = currentConfig?.video_url || null;
       let audioUrl = currentConfig?.audio_url || null;
-      const durationSeconds =
-        typeof durationMinutes === "number" && durationMinutes > 0 ? durationMinutes * 60 : null;
 
       // Upload do vídeo
       if (videoFile) {
@@ -124,14 +120,14 @@ const Admin = () => {
       // Atualizar configuração no banco
       const { error: updateError } = await supabase
         .from("call_config")
-        .update({ video_url: videoUrl, audio_url: audioUrl, duration_seconds: durationSeconds })
+        .update({ video_url: videoUrl, audio_url: audioUrl })
         .eq("id", "00000000-0000-0000-0000-000000000000");
 
       if (updateError) throw updateError;
 
       toast({
         title: "Configuração salva!",
-        description: "Vídeo, áudio e duração padrão atualizados com sucesso.",
+        description: "Vídeo e áudio atualizados com sucesso.",
       });
 
       setVideoFile(null);
@@ -169,9 +165,10 @@ const Admin = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Configuração da Chamada</CardTitle>
+            <CardTitle>Sistema de Chamada Único</CardTitle>
             <CardDescription>
-              Faça upload do vídeo (MP4) e áudio (MP3) para personalizar a experiência da chamada
+              Defina o vídeo e o áudio base da chamada e gere links personalizados para chamadas
+              normais e de verificação.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -208,35 +205,8 @@ const Admin = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duração padrão da chamada (minutos)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min={1}
-                  max={120}
-                  value={durationMinutes}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === "") {
-                      setDurationMinutes("");
-                    } else {
-                      const parsed = parseInt(value, 10);
-                      setDurationMinutes(Number.isNaN(parsed) ? "" : parsed);
-                    }
-                  }}
-                  placeholder="Ex: 3"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Duração padrão usada quando o link não informar um tempo específico.
-                </p>
-              </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading || (!videoFile && !audioFile && !durationMinutes)}
-              >
+              <Button type="submit" className="w-full" disabled={loading || (!videoFile && !audioFile)}>
                 <Upload className="mr-2 h-4 w-4" />
                 {loading ? "Salvando..." : "Salvar Configurações"}
               </Button>
@@ -246,9 +216,10 @@ const Admin = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Gerar link de chamada</CardTitle>
+            <CardTitle>Gerador de links da chamada</CardTitle>
             <CardDescription>
-              Gere links individuais para cada cliente, com duração personalizada ou experimental.
+              Use o mesmo vídeo/áudio acima e gere links específicos para cada cliente: chamada
+              completa ou apenas verificação rápida.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
