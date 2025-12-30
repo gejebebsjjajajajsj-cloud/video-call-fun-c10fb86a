@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Video, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
 import remoteVideoSrc from "@/assets/fake-call-remote.mp4";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,10 +38,21 @@ const Index = () => {
   const [durationLimitSeconds, setDurationLimitSeconds] = useState<number | null>(null);
   const [hasDurationParam, setHasDurationParam] = useState(false);
 
-  const [chatStep, setChatStep] = useState<"intro" | "minutes" | "contact" | "summary" | "finished">("intro");
+  const [chatStep, setChatStep] = useState<
+    | "intro"
+    | "minutes"
+    | "minutes_confirmed"
+    | "contact_typing"
+    | "contact"
+    | "contact_confirmed"
+    | "summary_typing"
+    | "summary"
+    | "finished"
+  >("intro");
   const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
   const [contactChannel, setContactChannel] = useState<"whatsapp" | "telegram" | "email" | null>(null);
   const [contactValue, setContactValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
 
   const selfVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -272,6 +283,43 @@ const Index = () => {
     return `${mins}:${secs}`;
   };
 
+  // Etapas intermediárias para simular digitação antes da próxima mensagem
+  useEffect(() => {
+    let timeout: number | undefined;
+
+    if (chatStep === "minutes_confirmed") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("contact_typing");
+      }, 700);
+    } else if (chatStep === "contact_typing") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("contact");
+      }, 800);
+    } else if (chatStep === "contact_confirmed") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("summary_typing");
+      }, 700);
+    } else if (chatStep === "summary_typing") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("summary");
+      }, 800);
+    }
+
+    return () => {
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [chatStep]);
+
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
       <main className="fixed inset-0 flex items-center justify-center overflow-hidden px-4">
@@ -299,7 +347,7 @@ const Index = () => {
                   </div>
                 </div>
 
-                {/* Bolhas de escolha de pacote (sempre visíveis na etapa inicial) */}
+                {/* Bolhas de escolha de pacote (apenas enquanto estiver escolhendo minutos) */}
                 {(chatStep === "intro" || chatStep === "minutes") && (
                   <div className="flex flex-col gap-2 pl-9">
                     {PACKAGES.map((pkg) => (
@@ -308,7 +356,7 @@ const Index = () => {
                         type="button"
                         onClick={() => {
                           setSelectedPackage(pkg);
-                          setChatStep("contact");
+                          setChatStep("minutes_confirmed");
                         }}
                         className="inline-flex max-w-[80%] flex-col items-start self-start rounded-2xl rounded-tl-sm border border-border/60 bg-background/95 px-3 py-2 text-left text-sm shadow-sm transition hover:border-primary/70 hover:shadow-[var(--shadow-soft)]"
                       >
@@ -327,7 +375,7 @@ const Index = () => {
                   </div>
                 )}
 
-                {/* Após o cliente escolher o pacote, mostra a resposta dele como bolha à direita */}
+                {/* Resposta do cliente com o pacote escolhido */}
                 {selectedPackage && (
                   <div className="flex justify-end">
                     <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[hsl(var(--call-accent-strong))] px-3 py-2 text-sm text-primary-foreground shadow-sm">
@@ -336,18 +384,19 @@ const Index = () => {
                   </div>
                 )}
 
-                {/* Pergunta de contato */}
-                {chatStep !== "intro" && selectedPackage && (
-                  <div className="mt-2 flex gap-2">
-                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                    <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                      <p>
-                        Perfeito, uma chamada de {selectedPackage.minutes} minutos. Onde você prefere receber o link
-                        da sala?
-                      </p>
+                {/* Pergunta de contato (só depois da "digitação") */}
+                {(chatStep === "contact" || chatStep === "contact_confirmed" || chatStep === "summary_typing" || chatStep === "summary" || chatStep === "finished") &&
+                  selectedPackage && (
+                    <div className="mt-2 flex gap-2">
+                      <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                      <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
+                        <p>
+                          Perfeito, uma chamada de {selectedPackage.minutes} minutos. Onde você prefere receber o link
+                          da sala?
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {chatStep === "contact" && selectedPackage && (
                   <>
@@ -400,7 +449,7 @@ const Index = () => {
                 )}
 
                 {/* Resumo antes de gerar o link */}
-                {chatStep === "summary" && selectedPackage && (
+                {(chatStep === "summary" || chatStep === "summary_typing") && selectedPackage && (
                   <>
                     <div className="flex gap-2">
                       <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
@@ -408,7 +457,10 @@ const Index = () => {
                         <p>Ótimo, revise rapidinho antes de continuar:</p>
                         <p className="mt-2 text-xs text-muted-foreground">
                           Pacote: <span className="font-medium text-foreground">{selectedPackage.label}</span> —
-                          <span className="font-semibold text-primary"> R$ {selectedPackage.price.toFixed(2).replace(".", ",")}</span>
+                          <span className="font-semibold text-primary">
+                            {" "}
+                            R$ {selectedPackage.price.toFixed(2).replace(".", ",")}
+                          </span>
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Contato: <span className="capitalize text-foreground">{contactChannel}</span> • {contactValue}
@@ -434,6 +486,21 @@ const Index = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Indicador de digitando */}
+                {isTyping && (
+                  <div className="flex gap-2">
+                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                    <div className="inline-flex items-center gap-1 rounded-2xl rounded-tl-sm bg-background/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
+                      <span>digitando</span>
+                      <span className="inline-flex gap-0.5">
+                        <span>·</span>
+                        <span>·</span>
+                        <span>·</span>
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Ações no rodapé do chat */}
@@ -443,14 +510,15 @@ const Index = () => {
                   <span>Depois vamos plugar o pagamento e automatizar tudo.</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  {(chatStep === "contact" || chatStep === "summary") && (
+                  {(chatStep === "contact" || chatStep === "summary" || chatStep === "summary_typing") && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (chatStep === "summary") setChatStep("contact");
-                        else {
+                        if (chatStep === "summary" || chatStep === "summary_typing") {
+                          setChatStep("contact");
+                        } else {
                           setChatStep("minutes");
                           setSelectedPackage(null);
                           setContactChannel(null);
@@ -467,7 +535,7 @@ const Index = () => {
                       size="sm"
                       variant="call-primary"
                       disabled={!contactChannel || !contactValue.trim()}
-                      onClick={() => setChatStep("summary")}
+                      onClick={() => setChatStep("contact_confirmed")}
                     >
                       Continuar
                     </Button>
