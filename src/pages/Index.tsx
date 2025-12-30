@@ -151,6 +151,17 @@ const Index = () => {
     toast({ title: "Chamada iniciada", description: "Você está conectado à sala privada." });
   };
 
+  // Garantir que o vídeo da sua câmera apareça assim que a chamada estiver ativa
+  useEffect(() => {
+    if (!inCall) return;
+
+    if (selfVideoRef.current && selfStreamRef.current) {
+      selfVideoRef.current.srcObject = selfStreamRef.current;
+      selfVideoRef.current.muted = true;
+      selfVideoRef.current.play().catch(() => undefined);
+    }
+  }, [inCall]);
+
   useEffect(() => {
     // Inicia a chamada automaticamente ao carregar a página
     startCall();
