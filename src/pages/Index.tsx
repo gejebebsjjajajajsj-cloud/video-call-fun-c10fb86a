@@ -275,30 +275,33 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
       <main className="fixed inset-0 flex items-center justify-center overflow-hidden px-4">
-        {/* Fluxo de chat guiado para venda quando não há duração na URL */}
+        {/* Fluxo de chat guiado em formato de conversa quando não há duração na URL */}
         {!hasDurationParam && !inCall && (
-          <div className="max-w-xl w-full space-y-6">
-            <Card className="bg-[hsl(var(--call-surface-soft))] border-border/60 shadow-[var(--shadow-soft)] p-6 space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Fluxo guiado</p>
-                <h1 className="text-2xl font-semibold leading-tight">
-                  Escolha sua chamada de vídeo privada em poucos passos
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Responda rapidamente às perguntas abaixo, escolha a minutagem da chamada e receba o link pronto
-                  para entrar na sala.
-                </p>
-              </div>
+          <div className="max-w-md w-full">
+            <Card className="flex h-[540px] flex-col overflow-hidden rounded-3xl border-border/60 bg-[hsl(var(--call-surface-soft))] shadow-[var(--shadow-soft)]">
+              {/* Cabeçalho do chat */}
+              <header className="flex items-center gap-3 border-b border-border/60 bg-[hsl(var(--call-surface))] px-4 py-3">
+                <div className="h-9 w-9 rounded-full bg-primary/20" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold">Atendente da chamada</span>
+                  <span className="text-[11px] text-muted-foreground">online agora • resposta em poucos segundos</span>
+                </div>
+              </header>
 
-              {/* Passo: escolha de pacote */}
-              {(chatStep === "intro" || chatStep === "minutes") && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="inline-flex rounded-2xl bg-[hsl(var(--call-surface))] px-3 py-2 text-sm">
-                      <span>Quantos minutos você quer de chamada?</span>
-                    </div>
+              {/* Área de mensagens */}
+              <div className="flex-1 space-y-3 overflow-y-auto bg-[hsl(var(--call-surface))] px-4 py-4">
+                {/* Mensagem inicial */}
+                <div className="flex gap-2">
+                  <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                  <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
+                    <p>Oi! Vamos montar sua chamada de vídeo privada agora mesmo. Me conta:</p>
+                    <p className="mt-1 font-medium">Quantos minutos você quer nessa chamada?</p>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
+                </div>
+
+                {/* Bolhas de escolha de pacote (sempre visíveis na etapa inicial) */}
+                {(chatStep === "intro" || chatStep === "minutes") && (
+                  <div className="flex flex-col gap-2 pl-9">
                     {PACKAGES.map((pkg) => (
                       <button
                         key={pkg.id}
@@ -307,9 +310,9 @@ const Index = () => {
                           setSelectedPackage(pkg);
                           setChatStep("contact");
                         }}
-                        className="flex flex-col items-start rounded-2xl border border-border/70 bg-background/80 px-4 py-3 text-left shadow-sm transition hover:border-primary/70 hover:shadow-[var(--shadow-soft)]"
+                        className="inline-flex max-w-[80%] flex-col items-start self-start rounded-2xl rounded-tl-sm border border-border/60 bg-background/95 px-3 py-2 text-left text-sm shadow-sm transition hover:border-primary/70 hover:shadow-[var(--shadow-soft)]"
                       >
-                        <span className="text-sm font-medium">{pkg.label}</span>
+                        <span className="font-medium">{pkg.label}</span>
                         <span className="text-xs text-muted-foreground">
                           Aproximadamente {pkg.minutes} minutos
                         </span>
@@ -318,130 +321,161 @@ const Index = () => {
                         </span>
                       </button>
                     ))}
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Valores de exemplo para testes — depois ajustamos os preços reais.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Valores de exemplo para testes — depois podemos ajustar os preços e pacotes no painel.
-                  </p>
-                </div>
-              )}
+                )}
 
-              {/* Passo: contato */}
-              {chatStep === "contact" && selectedPackage && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="inline-flex rounded-2xl bg-[hsl(var(--call-surface))] px-3 py-2 text-sm">
-                      <span>
-                        Perfeito, chamada de {selectedPackage.minutes} minutos. Onde você quer receber o link da
-                        sala?
-                      </span>
+                {/* Após o cliente escolher o pacote, mostra a resposta dele como bolha à direita */}
+                {selectedPackage && (
+                  <div className="flex justify-end">
+                    <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[hsl(var(--call-accent-strong))] px-3 py-2 text-sm text-primary-foreground shadow-sm">
+                      {selectedPackage.label}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={contactChannel === "whatsapp" ? "call-primary" : "call"}
-                      onClick={() => setContactChannel("whatsapp")}
-                    >
-                      WhatsApp
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={contactChannel === "telegram" ? "call-primary" : "call"}
-                      onClick={() => setContactChannel("telegram")}
-                    >
-                      Telegram
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={contactChannel === "email" ? "call-primary" : "call"}
-                      onClick={() => setContactChannel("email")}
-                    >
-                      E-mail
-                    </Button>
-                  </div>
-                  {contactChannel && (
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        {contactChannel === "email" ? "Digite seu e-mail" : "Digite seu número com DDD"}
-                      </label>
-                      <Input
-                        value={contactValue}
-                        onChange={(e) => setContactValue(e.target.value)}
-                        placeholder={
-                          contactChannel === "email"
-                            ? "seuemail@exemplo.com"
-                            : "(11) 99999-9999"
-                        }
-                        className="bg-background/80 border-border/70"
-                      />
+                )}
+
+                {/* Pergunta de contato */}
+                {chatStep !== "intro" && selectedPackage && (
+                  <div className="mt-2 flex gap-2">
+                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                    <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
+                      <p>
+                        Perfeito, uma chamada de {selectedPackage.minutes} minutos. Onde você prefere receber o link
+                        da sala?
+                      </p>
                     </div>
-                  )}
-                  <div className="flex justify-between items-center pt-2">
+                  </div>
+                )}
+
+                {chatStep === "contact" && selectedPackage && (
+                  <>
+                    <div className="flex flex-wrap gap-2 pl-9 pt-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={contactChannel === "whatsapp" ? "call-primary" : "call"}
+                        onClick={() => setContactChannel("whatsapp")}
+                      >
+                        WhatsApp
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={contactChannel === "telegram" ? "call-primary" : "call"}
+                        onClick={() => setContactChannel("telegram")}
+                      >
+                        Telegram
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={contactChannel === "email" ? "call-primary" : "call"}
+                        onClick={() => setContactChannel("email")}
+                      >
+                        E-mail
+                      </Button>
+                    </div>
+                    {contactChannel && (
+                      <div className="mt-3 flex justify-end">
+                        <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[hsl(var(--call-accent-strong))] px-3 py-2 text-sm text-primary-foreground shadow-sm">
+                          <div className="space-y-1 text-xs">
+                            <p className="font-semibold">
+                              {contactChannel === "email" ? "Digite seu e-mail" : "Digite seu número com DDD"}
+                            </p>
+                            <Input
+                              value={contactValue}
+                              onChange={(e) => setContactValue(e.target.value)}
+                              placeholder={
+                                contactChannel === "email" ? "seuemail@exemplo.com" : "(11) 99999-9999"
+                              }
+                              className="border-none bg-background/90 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Resumo antes de gerar o link */}
+                {chatStep === "summary" && selectedPackage && (
+                  <>
+                    <div className="flex gap-2">
+                      <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                      <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
+                        <p>Ótimo, revise rapidinho antes de continuar:</p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Pacote: <span className="font-medium text-foreground">{selectedPackage.label}</span> —
+                          <span className="font-semibold text-primary"> R$ {selectedPackage.price.toFixed(2).replace(".", ",")}</span>
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Contato: <span className="capitalize text-foreground">{contactChannel}</span> • {contactValue}
+                        </p>
+                        <p className="mt-2 text-[11px]">
+                          Nesta primeira versão o pagamento ainda não está integrado. O próximo passo vai gerar uma
+                          chamada de teste com a minutagem escolhida.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Mensagem final após gerar link */}
+                {chatStep === "finished" && (
+                  <div className="flex gap-2">
+                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
+                    <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
+                      <p>
+                        Prontinho! Abrimos sua sala de chamada em outra aba. Assim que o gateway brasileiro estiver
+                        conectado, aqui será o ponto em que o pagamento é aprovado e a chamada é liberada.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Ações no rodapé do chat */}
+              <footer className="flex items-center justify-between gap-3 border-t border-border/60 bg-[hsl(var(--call-surface))] px-4 py-3 text-xs text-muted-foreground">
+                <div className="flex flex-col">
+                  <span>Fluxo de teste da chamada</span>
+                  <span>Depois vamos plugar o pagamento e automatizar tudo.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {(chatStep === "contact" || chatStep === "summary") && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        setChatStep("minutes");
-                        setContactChannel(null);
-                        setContactValue("");
+                        if (chatStep === "summary") setChatStep("contact");
+                        else {
+                          setChatStep("minutes");
+                          setSelectedPackage(null);
+                          setContactChannel(null);
+                          setContactValue("");
+                        }
                       }}
                     >
                       Voltar
                     </Button>
+                  )}
+                  {chatStep === "contact" && (
                     <Button
                       type="button"
+                      size="sm"
                       variant="call-primary"
                       disabled={!contactChannel || !contactValue.trim()}
                       onClick={() => setChatStep("summary")}
                     >
                       Continuar
                     </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Passo: resumo e geração de link de teste */}
-              {chatStep === "summary" && selectedPackage && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="inline-flex rounded-2xl bg-[hsl(var(--call-surface))] px-3 py-2 text-sm">
-                      <span>Revise os detalhes antes de ir para a chamada.</span>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <p>
-                      <span className="text-muted-foreground">Pacote escolhido:</span>{" "}
-                      <span className="font-medium">{selectedPackage.label}</span> —
-                      <span className="text-primary font-semibold"> R$ {selectedPackage.price.toFixed(2).replace(".", ",")}</span>
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Contato:</span>{" "}
-                      <span className="font-medium capitalize">{contactChannel}</span>{" "}
-                      <span className="text-muted-foreground">•</span>{" "}
-                      <span>{contactValue}</span>
-                    </p>
-                  </div>
-                  <div className="space-y-2 text-xs text-muted-foreground">
-                    <p>
-                      Nesta primeira versão, o pagamento ainda não está integrado. O botão abaixo gera um link de
-                      teste da chamada com a minutagem escolhida.
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
+                  )}
+                  {chatStep === "summary" && selectedPackage && (
                     <Button
                       type="button"
-                      variant="ghost"
                       size="sm"
-                      onClick={() => setChatStep("contact")}
-                    >
-                      Voltar
-                    </Button>
-                    <Button
-                      type="button"
                       variant="call-primary"
                       onClick={() => {
                         const seconds = selectedPackage.minutes * 60;
@@ -451,39 +485,30 @@ const Index = () => {
                         toast({
                           title: "Sala de chamada aberta",
                           description:
-                            "Abrimos a sala de chamada em uma nova aba com a duração escolhida. Depois podemos conectar o pagamento aqui.",
+                            "Abrimos a sala de chamada em uma nova aba com a duração escolhida. Depois conectamos o pagamento aqui.",
                         });
                       }}
                     >
-                      Gerar link de teste da chamada
+                      Gerar chamada de teste
                     </Button>
-                  </div>
+                  )}
+                  {chatStep === "finished" && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="call"
+                      onClick={() => {
+                        setChatStep("minutes");
+                        setSelectedPackage(null);
+                        setContactChannel(null);
+                        setContactValue("");
+                      }}
+                    >
+                      Criar outra chamada
+                    </Button>
+                  )}
                 </div>
-              )}
-
-              {chatStep === "finished" && (
-                <div className="space-y-3 text-sm">
-                  <div className="inline-flex rounded-2xl bg-[hsl(var(--call-surface))] px-3 py-2">
-                    <span>
-                      Link gerado e sala aberta em outra aba. Assim que integrarmos o gateway brasileiro, este passo
-                      vai gerar a cobrança automaticamente.
-                    </span>
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="call"
-                    onClick={() => {
-                      setChatStep("minutes");
-                      setSelectedPackage(null);
-                      setContactChannel(null);
-                      setContactValue("");
-                    }}
-                  >
-                    Criar outra chamada de teste
-                  </Button>
-                </div>
-              )}
+              </footer>
             </Card>
           </div>
         )}
