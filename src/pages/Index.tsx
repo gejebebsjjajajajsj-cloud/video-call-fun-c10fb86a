@@ -448,13 +448,12 @@ const Index = () => {
                   </>
                 )}
 
-                {/* Resumo antes de gerar o link */}
                 {(chatStep === "summary" || chatStep === "summary_typing") && selectedPackage && (
                   <>
                     <div className="flex gap-2">
                       <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
                       <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                        <p>Ótimo, revise rapidinho antes de continuar:</p>
+                        <p>Perfeito, só pra confirmar rapidinho:</p>
                         <p className="mt-2 text-xs text-muted-foreground">
                           Pacote: <span className="font-medium text-foreground">{selectedPackage.label}</span> —
                           <span className="font-semibold text-primary">
@@ -465,10 +464,30 @@ const Index = () => {
                         <p className="mt-1 text-xs text-muted-foreground">
                           Contato: <span className="capitalize text-foreground">{contactChannel}</span> • {contactValue}
                         </p>
-                        <p className="mt-2 text-[11px]">
-                          Nesta primeira versão o pagamento ainda não está integrado. O próximo passo vai gerar uma
-                          chamada de teste com a minutagem escolhida.
+                        <p className="mt-3 text-xs">
+                          Agora vou abrir uma sala de teste com essa minutagem. Assim que o pagamento brasileiro
+                          estiver plugado, esse será o ponto em que a cobrança acontece e a sala é liberada.
                         </p>
+                        <div className="mt-3 flex">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="call-primary"
+                            onClick={() => {
+                              const seconds = selectedPackage.minutes * 60;
+                              const url = `${window.location.origin}/?seconds=${seconds}`;
+                              window.open(url, "_blank");
+                              setChatStep("finished");
+                              toast({
+                                title: "Sala de chamada aberta",
+                                description:
+                                  "Abrimos a sala de chamada em uma nova aba com a duração escolhida. Depois conectamos o pagamento aqui.",
+                              });
+                            }}
+                          >
+                            Gerar chamada de teste
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </>
@@ -480,9 +499,21 @@ const Index = () => {
                     <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
                     <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
                       <p>
-                        Prontinho! Abrimos sua sala de chamada em outra aba. Assim que o gateway brasileiro estiver
-                        conectado, aqui será o ponto em que o pagamento é aprovado e a chamada é liberada.
+                        Prontinho! Abrimos sua sala de chamada em outra aba. Quando o fluxo completo estiver ligado,
+                        esse será o momento exato em que o cliente faz o pagamento e cai direto na chamada.
                       </p>
+                      <button
+                        type="button"
+                        className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
+                        onClick={() => {
+                          setChatStep("minutes");
+                          setSelectedPackage(null);
+                          setContactChannel(null);
+                          setContactValue("");
+                        }}
+                      >
+                        Criar outra chamada de teste
+                      </button>
                     </div>
                   </div>
                 )}
@@ -502,81 +533,6 @@ const Index = () => {
                   </div>
                 )}
               </div>
-
-              {/* Ações no rodapé do chat */}
-              <footer className="flex items-center justify-between gap-3 border-t border-border/60 bg-[hsl(var(--call-surface))] px-4 py-3 text-xs text-muted-foreground">
-                <div className="flex flex-col">
-                  <span>Fluxo de teste da chamada</span>
-                  <span>Depois vamos plugar o pagamento e automatizar tudo.</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {(chatStep === "contact" || chatStep === "summary" || chatStep === "summary_typing") && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (chatStep === "summary" || chatStep === "summary_typing") {
-                          setChatStep("contact");
-                        } else {
-                          setChatStep("minutes");
-                          setSelectedPackage(null);
-                          setContactChannel(null);
-                          setContactValue("");
-                        }
-                      }}
-                    >
-                      Voltar
-                    </Button>
-                  )}
-                  {chatStep === "contact" && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="call-primary"
-                      disabled={!contactChannel || !contactValue.trim()}
-                      onClick={() => setChatStep("contact_confirmed")}
-                    >
-                      Continuar
-                    </Button>
-                  )}
-                  {chatStep === "summary" && selectedPackage && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="call-primary"
-                      onClick={() => {
-                        const seconds = selectedPackage.minutes * 60;
-                        const url = `${window.location.origin}/?seconds=${seconds}`;
-                        window.open(url, "_blank");
-                        setChatStep("finished");
-                        toast({
-                          title: "Sala de chamada aberta",
-                          description:
-                            "Abrimos a sala de chamada em uma nova aba com a duração escolhida. Depois conectamos o pagamento aqui.",
-                        });
-                      }}
-                    >
-                      Gerar chamada de teste
-                    </Button>
-                  )}
-                  {chatStep === "finished" && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="call"
-                      onClick={() => {
-                        setChatStep("minutes");
-                        setSelectedPackage(null);
-                        setContactChannel(null);
-                        setContactValue("");
-                      }}
-                    >
-                      Criar outra chamada
-                    </Button>
-                  )}
-                </div>
-              </footer>
             </Card>
           </div>
         )}
