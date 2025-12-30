@@ -301,15 +301,7 @@ const Index = () => {
             </div>
           </>
         ) : (
-          // Tela de chamada encerrada (sem notificações)
-          <div className="flex flex-col items-center justify-center gap-4 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--call-surface-soft))] shadow-[0_18px_40px_hsl(210_80%_2%/0.95)]">
-              <PhoneOff className="h-8 w-8 text-[hsl(var(--destructive))]" />
-            </div>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              Chamada encerrada.
-            </p>
-          </div>
+          null
         )}
       </main>
     </div>
