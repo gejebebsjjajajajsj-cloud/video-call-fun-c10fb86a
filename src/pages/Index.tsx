@@ -22,9 +22,9 @@ interface PackageOption {
 const CALL_DURATION_LIMIT_MINUTES = 30;
 
 const PACKAGES: PackageOption[] = [
-  { id: "p3", label: "3 minutos", minutes: 3, price: 9.9 },
-  { id: "p5", label: "5 minutos", minutes: 5, price: 14.9 },
-  { id: "p10", label: "10 minutos", minutes: 10, price: 24.9 },
+  { id: "p10", label: "10 minutos", minutes: 10, price: 49.9 },
+  { id: "p20", label: "20 minutos", minutes: 20, price: 79.9 },
+  { id: "p30", label: "30 minutos", minutes: 30, price: 99.9 },
 ];
 
 const Index = () => {
@@ -38,21 +38,22 @@ const Index = () => {
   const [durationLimitSeconds, setDurationLimitSeconds] = useState<number | null>(null);
   const [hasDurationParam, setHasDurationParam] = useState(false);
 
-  const [chatStep, setChatStep] = useState<
-    | "intro"
-    | "minutes"
-    | "minutes_confirmed"
-    | "contact_typing"
-    | "contact"
-    | "contact_confirmed"
-    | "summary_typing"
-    | "summary"
-    | "finished"
-  >("intro");
-  const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
-  const [contactChannel, setContactChannel] = useState<"whatsapp" | "telegram" | "email" | null>(null);
-  const [contactValue, setContactValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+type ChatStep =
+  | "opening"
+  | "connection"
+  | "desire"
+  | "qualification"
+  | "offer"
+  | "hesitation"
+  | "close"
+  | "finished";
+
+const [chatStep, setChatStep] = useState<ChatStep>("opening");
+const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
+const [openingReason, setOpeningReason] = useState<string | null>(null);
+const [experienceHistory, setExperienceHistory] = useState<string | null>(null);
+const [desireStyle, setDesireStyle] = useState<string | null>(null);
+const [isTyping, setIsTyping] = useState(false);
 
 
   const selfVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -283,42 +284,29 @@ const Index = () => {
     return `${mins}:${secs}`;
   };
 
-  // Etapas intermediárias para simular digitação antes da próxima mensagem
-  useEffect(() => {
-    let timeout: number | undefined;
+// Simula digitação entre as etapas da conversa
+useEffect(() => {
+  if (chatStep === "opening") return;
 
-    if (chatStep === "minutes_confirmed") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("contact_typing");
-      }, 700);
-    } else if (chatStep === "contact_typing") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("contact");
-      }, 800);
-    } else if (chatStep === "contact_confirmed") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("summary_typing");
-      }, 700);
-    } else if (chatStep === "summary_typing") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("summary");
-      }, 800);
-    }
+  setIsTyping(true);
+  const timeout = window.setTimeout(() => {
+    setIsTyping(false);
+  }, 900);
 
-    return () => {
-      if (timeout) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [chatStep]);
+  return () => {
+    window.clearTimeout(timeout);
+  };
+}, [chatStep]);
+
+const proceedToStep = (next: ChatStep) => {
+  setIsTyping(true);
+  const timeout = window.setTimeout(() => {
+    setIsTyping(false);
+    setChatStep(next);
+  }, 700);
+
+  return () => window.clearTimeout(timeout);
+};
 
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
