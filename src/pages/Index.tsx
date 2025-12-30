@@ -244,14 +244,14 @@ const Index = () => {
           <>
             {/* Vídeo remoto ocupando a tela inteira (respeita vídeo em pé) */}
             <video
-              ref={remoteVideoRef}
-              className="absolute inset-0 h-full w-full object-contain bg-black"
-              src={configVideoUrl || remoteVideoSrc}
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
+               ref={remoteVideoRef}
+               className="absolute inset-0 h-full w-full object-cover bg-black"
+               src={configVideoUrl || remoteVideoSrc}
+               autoPlay
+               loop
+               muted
+               playsInline
+             />
 
             {/* Áudio da modelo tocando junto com o vídeo */}
             {configAudioUrl && <audio ref={remoteAudioRef} src={configAudioUrl} loop />}
