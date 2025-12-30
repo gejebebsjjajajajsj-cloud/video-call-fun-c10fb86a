@@ -38,23 +38,22 @@ const Index = () => {
   const [durationLimitSeconds, setDurationLimitSeconds] = useState<number | null>(null);
   const [hasDurationParam, setHasDurationParam] = useState(false);
 
-type ChatStep =
-  | "opening"
-  | "connection"
-  | "desire"
-  | "qualification"
-  | "offer"
-  | "hesitation"
-  | "close"
-  | "finished";
+  type ChatStep =
+    | "intro"
+    | "minutes"
+    | "minutes_confirmed"
+    | "contact_typing"
+    | "contact"
+    | "contact_confirmed"
+    | "summary_typing"
+    | "summary"
+    | "finished";
 
-const [chatStep, setChatStep] = useState<ChatStep>("opening");
-const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
-const [openingReason, setOpeningReason] = useState<string | null>(null);
-const [experienceHistory, setExperienceHistory] = useState<string | null>(null);
-const [desireStyle, setDesireStyle] = useState<string | null>(null);
-const [isTyping, setIsTyping] = useState(false);
-
+  const [chatStep, setChatStep] = useState<ChatStep>("intro");
+  const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
+  const [contactChannel, setContactChannel] = useState<"whatsapp" | "telegram" | "email" | null>(null);
+  const [contactValue, setContactValue] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
 
   const selfVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -284,29 +283,42 @@ const [isTyping, setIsTyping] = useState(false);
     return `${mins}:${secs}`;
   };
 
-// Simula digitação entre as etapas da conversa
-useEffect(() => {
-  if (chatStep === "opening") return;
+  // Etapas intermediárias para simular digitação antes da próxima mensagem
+  useEffect(() => {
+    let timeout: number | undefined;
 
-  setIsTyping(true);
-  const timeout = window.setTimeout(() => {
-    setIsTyping(false);
-  }, 900);
+    if (chatStep === "minutes_confirmed") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("contact_typing");
+      }, 700);
+    } else if (chatStep === "contact_typing") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("contact");
+      }, 800);
+    } else if (chatStep === "contact_confirmed") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("summary_typing");
+      }, 700);
+    } else if (chatStep === "summary_typing") {
+      setIsTyping(true);
+      timeout = window.setTimeout(() => {
+        setIsTyping(false);
+        setChatStep("summary");
+      }, 800);
+    }
 
-  return () => {
-    window.clearTimeout(timeout);
-  };
-}, [chatStep]);
-
-const proceedToStep = (next: ChatStep) => {
-  setIsTyping(true);
-  const timeout = window.setTimeout(() => {
-    setIsTyping(false);
-    setChatStep(next);
-  }, 700);
-
-  return () => window.clearTimeout(timeout);
-};
+    return () => {
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, [chatStep]);
 
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
