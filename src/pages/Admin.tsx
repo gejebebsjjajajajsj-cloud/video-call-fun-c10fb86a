@@ -78,6 +78,40 @@ const Admin = () => {
     return url.toString();
   };
 
+  const createCallLink = async (
+    totalSeconds: number,
+    setUrl: (url: string) => void,
+    successDescription: string,
+  ) => {
+    try {
+      const host = window.location.host;
+      const { data, error } = await supabase
+        .from("call_links")
+        .insert({ site_id: host, duration_seconds: totalSeconds })
+        .select("id")
+        .single();
+
+      if (error || !data) throw error || new Error("Erro ao criar link");
+
+      const origin = window.location.origin;
+      const url = new URL("/", origin);
+      url.searchParams.set("call", String(data.id));
+
+      setUrl(url.toString());
+
+      toast({
+        title: "Link gerado",
+        description: successDescription,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao gerar link",
+        description: error?.message ?? "Não foi possível gerar o link. Tente novamente.",
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -266,7 +300,7 @@ const Admin = () => {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
+                onClick={async () => {
                   const mins = typeof generatorMinutes === "number" ? generatorMinutes : 0;
                   const secs = typeof generatorSeconds === "number" ? generatorSeconds : 0;
                   const total = mins * 60 + secs;
@@ -278,8 +312,8 @@ const Admin = () => {
                     });
                     return;
                   }
-                  const url = buildCallUrl(total);
-                  setGeneratorUrl(url);
+
+                  await createCallLink(total, setGeneratorUrl, "Link de chamada criado com sucesso.");
                 }}
               >
                 Gerar link de chamada
@@ -330,7 +364,7 @@ const Admin = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
+                  onClick={async () => {
                     const secs = typeof trialSeconds === "number" ? trialSeconds : 0;
                     if (secs <= 0) {
                       toast({
@@ -340,8 +374,8 @@ const Admin = () => {
                       });
                       return;
                     }
-                    const url = buildCallUrl(secs);
-                    setTrialUrl(url);
+
+                    await createCallLink(secs, setTrialUrl, "Link de verificação criado com sucesso.");
                   }}
                 >
                   Gerar link de verificação

@@ -22,6 +22,7 @@ const Index = () => {
   const [configVideoUrl, setConfigVideoUrl] = useState<string | null>(null);
   const [configAudioUrl, setConfigAudioUrl] = useState<string | null>(null);
   const [durationLimitSeconds, setDurationLimitSeconds] = useState<number | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const selfVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -54,18 +55,29 @@ const Index = () => {
       document.head.appendChild(link);
     }
 
-    // Verificar se a URL já traz uma duração específica (em segundos)
     const params = new URLSearchParams(window.location.search);
-    const secondsFromUrl = params.get("seconds");
-    if (secondsFromUrl) {
-      const parsed = parseInt(secondsFromUrl, 10);
-      if (!Number.isNaN(parsed) && parsed > 0) {
-        setDurationLimitSeconds(parsed);
-      }
-    }
+    const callIdFromUrl = params.get("call");
 
-    // Buscar configuração de vídeo, áudio e duração do banco
-    const loadConfig = async () => {
+    const init = async () => {
+      let effectiveDuration: number | null = null;
+
+      if (callIdFromUrl) {
+        const { data, error } = await supabase
+          .from("call_links")
+          .update({ status: "used", started_at: new Date().toISOString() })
+          .eq("id", callIdFromUrl)
+          .eq("status", "unused")
+          .select("duration_seconds")
+          .single();
+
+        if (error || !data) {
+          setLinkError("Este link de chamada é inválido ou já foi utilizado.");
+          return;
+        }
+
+        effectiveDuration = data.duration_seconds;
+      }
+
       const host = window.location.host;
       const { data } = await supabase
         .from("call_config")
@@ -76,11 +88,20 @@ const Index = () => {
       if (data) {
         setConfigVideoUrl(data.video_url);
         setConfigAudioUrl(data.audio_url);
-        setDurationLimitSeconds((prev) => (prev !== null ? prev : data.duration_seconds ?? null));
+        if (effectiveDuration === null && data.duration_seconds) {
+          effectiveDuration = data.duration_seconds;
+        }
       }
+
+      if (effectiveDuration !== null) {
+        setDurationLimitSeconds(effectiveDuration);
+      }
+
+      await startCall();
     };
 
-    loadConfig();
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -163,10 +184,10 @@ const Index = () => {
   }, [inCall]);
 
   useEffect(() => {
-    // Inicia a chamada automaticamente ao carregar a página
-    startCall();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!inCall && !linkError) {
+      // A chamada será iniciada em init(), mas este efeito garante que não haja estados inconsistentes
+    }
+  }, [inCall, linkError]);
 
   useEffect(() => {
     // Sincronizar áudio com o vídeo remoto quando disponível
@@ -244,6 +265,19 @@ const Index = () => {
     const secs = (seconds % 60).toString().padStart(2, "0");
     return `${mins}:${secs}`;
   };
+
+  if (linkError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--call-surface))] text-foreground">
+        <Card className="p-6 max-w-md text-center space-y-2">
+          <p className="font-semibold">Link de chamada inválido</p>
+          <p className="text-sm text-muted-foreground">
+            Este link já foi utilizado ou não é mais válido. Peça um novo link para a modelo.
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
