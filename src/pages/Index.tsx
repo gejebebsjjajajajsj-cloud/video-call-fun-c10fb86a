@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Video, PhoneOff, Mic, MicOff, Camera, CameraOff } from "lucide-react";
 import remoteVideoSrc from "@/assets/fake-call-remote.mp4";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,20 +11,7 @@ interface MediaState {
   camOn: boolean;
 }
 
-interface PackageOption {
-  id: string;
-  label: string;
-  minutes: number;
-  price: number;
-}
-
 const CALL_DURATION_LIMIT_MINUTES = 30;
-
-const PACKAGES: PackageOption[] = [
-  { id: "p10", label: "10 minutos", minutes: 10, price: 49.9 },
-  { id: "p20", label: "20 minutos", minutes: 20, price: 79.9 },
-  { id: "p30", label: "30 minutos", minutes: 30, price: 99.9 },
-];
 
 const Index = () => {
   const [inCall, setInCall] = useState(false);
@@ -36,24 +22,6 @@ const Index = () => {
   const [configVideoUrl, setConfigVideoUrl] = useState<string | null>(null);
   const [configAudioUrl, setConfigAudioUrl] = useState<string | null>(null);
   const [durationLimitSeconds, setDurationLimitSeconds] = useState<number | null>(null);
-  const [hasDurationParam, setHasDurationParam] = useState(false);
-
-  type ChatStep =
-    | "intro"
-    | "minutes"
-    | "minutes_confirmed"
-    | "contact_typing"
-    | "contact"
-    | "contact_confirmed"
-    | "summary_typing"
-    | "summary"
-    | "finished";
-
-  const [chatStep, setChatStep] = useState<ChatStep>("intro");
-  const [selectedPackage, setSelectedPackage] = useState<PackageOption | null>(null);
-  const [contactChannel, setContactChannel] = useState<"whatsapp" | "telegram" | "email" | null>(null);
-  const [contactValue, setContactValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
 
   const selfVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -93,10 +61,7 @@ const Index = () => {
       const parsed = parseInt(secondsFromUrl, 10);
       if (!Number.isNaN(parsed) && parsed > 0) {
         setDurationLimitSeconds(parsed);
-        setHasDurationParam(true);
       }
-    } else {
-      setHasDurationParam(false);
     }
 
     // Buscar configuração de vídeo, áudio e duração do banco
@@ -198,11 +163,8 @@ const Index = () => {
   }, [inCall]);
 
   useEffect(() => {
-    // Inicia a chamada automaticamente apenas quando houver duração na URL (modo sala)
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("seconds")) {
-      startCall();
-    }
+    // Inicia a chamada automaticamente ao carregar a página
+    startCall();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -283,321 +245,70 @@ const Index = () => {
     return `${mins}:${secs}`;
   };
 
-  // Etapas intermediárias para simular digitação antes da próxima mensagem
-  useEffect(() => {
-    let timeout: number | undefined;
-
-    if (chatStep === "minutes_confirmed") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("contact_typing");
-      }, 700);
-    } else if (chatStep === "contact_typing") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("contact");
-      }, 800);
-    } else if (chatStep === "contact_confirmed") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("summary_typing");
-      }, 700);
-    } else if (chatStep === "summary_typing") {
-      setIsTyping(true);
-      timeout = window.setTimeout(() => {
-        setIsTyping(false);
-        setChatStep("summary");
-      }, 800);
-    }
-
-    return () => {
-      if (timeout) {
-        window.clearTimeout(timeout);
-      }
-    };
-  }, [chatStep]);
-
   return (
     <div className="min-h-screen bg-[hsl(var(--call-surface))] text-foreground relative overflow-hidden">
-      <main className="fixed inset-0 flex items-center justify-center overflow-hidden px-4">
-        {/* Fluxo de chat guiado em formato de conversa quando não há duração na URL */}
-        {!hasDurationParam && !inCall && (
-          <div className="max-w-md w-full">
-            <Card className="flex h-[540px] flex-col overflow-hidden rounded-3xl border-border/60 bg-[hsl(var(--call-surface-soft))] shadow-[var(--shadow-soft)]">
-              {/* Cabeçalho do chat */}
-              <header className="flex items-center gap-3 border-b border-border/60 bg-[hsl(var(--call-surface))] px-4 py-3">
-                <div className="h-9 w-9 rounded-full bg-primary/20" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold">Atendente da chamada</span>
-                  <span className="text-[11px] text-muted-foreground">online agora • resposta em poucos segundos</span>
-                </div>
-              </header>
-
-              {/* Área de mensagens */}
-              <div className="flex-1 space-y-3 overflow-y-auto bg-[hsl(var(--call-surface))] px-4 py-4">
-                {/* Mensagem inicial */}
-                <div className="flex gap-2">
-                  <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                  <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                    <p>Oi! Vamos montar sua chamada de vídeo privada agora mesmo. Me conta:</p>
-                    <p className="mt-1 font-medium">Quantos minutos você quer nessa chamada?</p>
-                  </div>
-                </div>
-
-                {/* Bolhas de escolha de pacote (apenas enquanto estiver escolhendo minutos) */}
-                {(chatStep === "intro" || chatStep === "minutes") && (
-                  <div className="flex flex-col gap-2 pl-9">
-                    {PACKAGES.map((pkg) => (
-                      <button
-                        key={pkg.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedPackage(pkg);
-                          setChatStep("minutes_confirmed");
-                        }}
-                        className="inline-flex max-w-[80%] flex-col items-start self-start rounded-2xl rounded-tl-sm border border-border/60 bg-background/95 px-3 py-2 text-left text-sm shadow-sm transition hover:border-primary/70 hover:shadow-[var(--shadow-soft)]"
-                      >
-                        <span className="font-medium">{pkg.label}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Aproximadamente {pkg.minutes} minutos
-                        </span>
-                        <span className="mt-1 text-sm font-semibold text-primary">
-                          R$ {pkg.price.toFixed(2).replace(".", ",")}
-                        </span>
-                      </button>
-                    ))}
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      Valores de exemplo para testes — depois ajustamos os preços reais.
-                    </p>
-                  </div>
-                )}
-
-                {/* Resposta do cliente com o pacote escolhido */}
-                {selectedPackage && (
-                  <div className="flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[hsl(var(--call-accent-strong))] px-3 py-2 text-sm text-primary-foreground shadow-sm">
-                      {selectedPackage.label}
-                    </div>
-                  </div>
-                )}
-
-                {/* Pergunta de contato (só depois da "digitação") */}
-                {(chatStep === "contact" || chatStep === "contact_confirmed" || chatStep === "summary_typing" || chatStep === "summary" || chatStep === "finished") &&
-                  selectedPackage && (
-                    <div className="mt-2 flex gap-2">
-                      <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                      <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                        <p>
-                          Perfeito, uma chamada de {selectedPackage.minutes} minutos. Onde você prefere receber o link
-                          da sala?
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                {chatStep === "contact" && selectedPackage && (
-                  <>
-                    <div className="flex flex-wrap gap-2 pl-9 pt-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={contactChannel === "whatsapp" ? "call-primary" : "call"}
-                        onClick={() => setContactChannel("whatsapp")}
-                      >
-                        WhatsApp
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={contactChannel === "telegram" ? "call-primary" : "call"}
-                        onClick={() => setContactChannel("telegram")}
-                      >
-                        Telegram
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={contactChannel === "email" ? "call-primary" : "call"}
-                        onClick={() => setContactChannel("email")}
-                      >
-                        E-mail
-                      </Button>
-                    </div>
-                    {contactChannel && (
-                      <div className="mt-3 flex justify-end">
-                        <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[hsl(var(--call-accent-strong))] px-3 py-2 text-sm text-primary-foreground shadow-sm">
-                          <div className="space-y-1 text-xs">
-                            <p className="font-semibold">
-                              {contactChannel === "email" ? "Digite seu e-mail" : "Digite seu número com DDD"}
-                            </p>
-                            <Input
-                              value={contactValue}
-                              onChange={(e) => setContactValue(e.target.value)}
-                              placeholder={
-                                contactChannel === "email" ? "seuemail@exemplo.com" : "(11) 99999-9999"
-                              }
-                              className="border-none bg-background/90 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {(chatStep === "summary" || chatStep === "summary_typing") && selectedPackage && (
-                  <>
-                    <div className="flex gap-2">
-                      <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                      <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                        <p>Perfeito, só pra confirmar rapidinho:</p>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          Pacote: <span className="font-medium text-foreground">{selectedPackage.label}</span> —
-                          <span className="font-semibold text-primary">
-                            {" "}
-                            R$ {selectedPackage.price.toFixed(2).replace(".", ",")}
-                          </span>
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Contato: <span className="capitalize text-foreground">{contactChannel}</span> • {contactValue}
-                        </p>
-                        <p className="mt-3 text-xs">
-                          Agora vou abrir uma sala de teste com essa minutagem. Assim que o pagamento brasileiro
-                          estiver plugado, esse será o ponto em que a cobrança acontece e a sala é liberada.
-                        </p>
-                        <div className="mt-3 flex">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="call-primary"
-                            onClick={() => {
-                              const seconds = selectedPackage.minutes * 60;
-                              const url = `${window.location.origin}/?seconds=${seconds}`;
-                              window.open(url, "_blank");
-                              setChatStep("finished");
-                              toast({
-                                title: "Sala de chamada aberta",
-                                description:
-                                  "Abrimos a sala de chamada em uma nova aba com a duração escolhida. Depois conectamos o pagamento aqui.",
-                              });
-                            }}
-                          >
-                            Gerar chamada de teste
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Mensagem final após gerar link */}
-                {chatStep === "finished" && (
-                  <div className="flex gap-2">
-                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                    <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-background/90 px-3 py-2 text-sm shadow-sm">
-                      <p>
-                        Prontinho! Abrimos sua sala de chamada em outra aba. Quando o fluxo completo estiver ligado,
-                        esse será o momento exato em que o cliente faz o pagamento e cai direto na chamada.
-                      </p>
-                      <button
-                        type="button"
-                        className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline"
-                        onClick={() => {
-                          setChatStep("minutes");
-                          setSelectedPackage(null);
-                          setContactChannel(null);
-                          setContactValue("");
-                        }}
-                      >
-                        Criar outra chamada de teste
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Indicador de digitando */}
-                {isTyping && (
-                  <div className="flex gap-2">
-                    <div className="mt-5 h-7 w-7 rounded-full bg-primary/25" />
-                    <div className="inline-flex items-center gap-1 rounded-2xl rounded-tl-sm bg-background/80 px-3 py-2 text-[11px] text-muted-foreground shadow-sm">
-                      <span>digitando</span>
-                      <span className="inline-flex gap-0.5">
-                        <span>·</span>
-                        <span>·</span>
-                        <span>·</span>
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Layout da sala de chamada (modo direto com ?seconds=) */}
-        {hasDurationParam && (
+      <main className="fixed inset-0 flex items-center justify-center overflow-hidden">
+        {inCall ? (
           <>
-            {inCall && (
-              <>
-                <video
-                  ref={remoteVideoRef}
-                  className="absolute inset-0 h-full w-full object-cover bg-black"
-                  src={configVideoUrl || remoteVideoSrc}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                />
+            {/* Vídeo remoto ocupando a tela inteira (respeita vídeo em pé) */}
+            <video
+              ref={remoteVideoRef}
+              className="absolute inset-0 h-full w-full object-cover bg-black"
+              src={configVideoUrl || remoteVideoSrc}
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
 
-                {configAudioUrl && <audio ref={remoteAudioRef} src={configAudioUrl} loop />}
+            {/* Áudio da modelo tocando junto com o vídeo */}
+            {configAudioUrl && <audio ref={remoteAudioRef} src={configAudioUrl} loop />}
 
-                <div className="pointer-events-none absolute right-3 top-3 z-20 h-32 w-24 overflow-hidden rounded-2xl border border-[hsl(var(--call-surface-soft))] bg-[hsl(var(--call-surface-soft))] shadow-[0_10px_28px_hsl(210_80%_2%/0.85)] sm:right-5 sm:top-5 sm:h-40 sm:w-32">
-                  <video
-                    ref={selfVideoRef}
-                    className="h-full w-full object-cover"
-                    autoPlay
-                    playsInline
-                    muted
-                  />
-                </div>
+            {/* Webcam do cliente no topo direito */}
+            <div className="pointer-events-none absolute right-3 top-3 z-20 h-32 w-24 overflow-hidden rounded-2xl border border-[hsl(var(--call-surface-soft))] bg-[hsl(var(--call-surface-soft))] shadow-[0_10px_28px_hsl(210_80%_2%/0.85)] sm:right-5 sm:top-5 sm:h-40 sm:w-32">
+              <video
+                ref={selfVideoRef}
+                className="h-full w-full object-cover"
+                autoPlay
+                playsInline
+                muted
+              />
+            </div>
 
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[hsl(var(--call-surface)/0.96)] via-[hsl(var(--call-surface)/0.7)] to-transparent" />
+            {/* Gradiente inferior para destacar controles */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[hsl(var(--call-surface)/0.96)] via-[hsl(var(--call-surface)/0.7)] to-transparent" />
 
-                <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center pb-2">
-                  <div className="flex items-center gap-3 rounded-full bg-[hsl(var(--call-surface-soft)/0.92)] px-4 py-2 shadow-[0_18px_40px_hsl(210_80%_2%/0.95)] backdrop-blur-md">
-                    <Button
-                      size="icon"
-                      variant="call"
-                      aria-label={mediaState.micOn ? "Desativar microfone" : "Ativar microfone"}
-                      onClick={toggleMic}
-                    >
-                      {mediaState.micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="call"
-                      aria-label={mediaState.camOn ? "Desativar câmera" : "Ativar câmera"}
-                      onClick={toggleCam}
-                    >
-                      {mediaState.camOn ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="call-danger"
-                      aria-label="Encerrar chamada"
-                      onClick={() => endCall("Você encerrou a chamada.")}
-                    >
-                      <PhoneOff className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </>
-            )}
+            {/* Controles de chamada */}
+            <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center pb-2">
+              <div className="flex items-center gap-3 rounded-full bg-[hsl(var(--call-surface-soft)/0.92)] px-4 py-2 shadow-[0_18px_40px_hsl(210_80%_2%/0.95)] backdrop-blur-md">
+                <Button
+                  size="icon"
+                  variant="call"
+                  aria-label={mediaState.micOn ? "Desativar microfone" : "Ativar microfone"}
+                  onClick={toggleMic}
+                >
+                  {mediaState.micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="call"
+                  aria-label={mediaState.camOn ? "Desativar câmera" : "Ativar câmera"}
+                  onClick={toggleCam}
+                >
+                  {mediaState.camOn ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
+                </Button>
+                <Button
+                  size="icon"
+                  variant="call-danger"
+                  aria-label="Encerrar chamada"
+                  onClick={() => endCall("Você encerrou a chamada.")}
+                >
+                  <PhoneOff className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </>
-        )}
+        ) : null}
       </main>
     </div>
   );
