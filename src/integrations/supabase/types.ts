@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      call_links: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          duration_seconds: number
+          id: string
+          site_id: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          duration_seconds: number
+          id?: string
+          site_id: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          site_id?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       pushinpay_config: {
         Row: {
           created_at: string
