@@ -189,32 +189,6 @@ const Index = () => {
     }
   }, [inCall, linkError]);
 
-  useEffect(() => {
-    // Sincronizar áudio com o vídeo remoto quando disponível
-    if (remoteVideoRef.current && remoteAudioRef.current && configAudioUrl) {
-      const video = remoteVideoRef.current;
-      const audio = remoteAudioRef.current;
-
-      const syncAudio = () => {
-        audio.currentTime = video.currentTime;
-        if (!video.paused) {
-          audio.play().catch(() => {});
-        } else {
-          audio.pause();
-        }
-      };
-
-      video.addEventListener("play", () => audio.play().catch(() => {}));
-      video.addEventListener("pause", () => audio.pause());
-      video.addEventListener("timeupdate", syncAudio);
-
-      return () => {
-        video.removeEventListener("play", syncAudio);
-        video.removeEventListener("pause", syncAudio);
-        video.removeEventListener("timeupdate", syncAudio);
-      };
-    }
-  }, [configAudioUrl]);
 
   const stopMediaTracks = () => {
     if (selfStreamRef.current) {
@@ -296,7 +270,7 @@ const Index = () => {
             />
 
             {/* Áudio da modelo tocando junto com o vídeo */}
-            {configAudioUrl && <audio ref={remoteAudioRef} src={configAudioUrl} loop />}
+            {configAudioUrl && <audio ref={remoteAudioRef} src={configAudioUrl} autoPlay loop />}
 
             {/* Webcam do cliente no topo direito */}
             <div className="pointer-events-none absolute right-3 top-3 z-20 h-32 w-24 overflow-hidden rounded-2xl border border-[hsl(var(--call-surface-soft))] bg-[hsl(var(--call-surface-soft))] shadow-[0_10px_28px_hsl(210_80%_2%/0.85)] sm:right-5 sm:top-5 sm:h-40 sm:w-32">
