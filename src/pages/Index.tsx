@@ -64,13 +64,16 @@ const Index = () => {
       if (callIdFromUrl) {
         const { data, error } = await supabase
           .from("call_links")
-          .update({ status: "used", started_at: new Date().toISOString() })
+          .select("duration_seconds, status")
           .eq("id", callIdFromUrl)
-          .eq("status", "unused")
-          .select("duration_seconds")
-          .single();
+          .maybeSingle();
 
         if (error || !data) {
+          setLinkError("Este link de chamada é inválido ou já foi utilizado.");
+          return;
+        }
+
+        if (data.status === "used") {
           setLinkError("Este link de chamada é inválido ou já foi utilizado.");
           return;
         }
